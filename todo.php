@@ -4,66 +4,72 @@ session_start();
 $koneksi = mysqli_connect("localhost", "root", "", "todo");
 
 if (mysqli_connect_errno()) {
-    die("Koneksi database gagal: " . mysqli_connect_error() . "(" . mysqli_connect_errno() . ")");
+  die("Koneksi database gagal: " . mysqli_connect_error() . "(" . mysqli_connect_errno() . ")");
 }
 
 function sanitize_input($input)
 {
-    global $koneksi;
-    return mysqli_real_escape_string($koneksi, $input);
+  global $koneksi;
+  return mysqli_real_escape_string($koneksi, $input);
 }
 
 function hash_password($password)
 {
-    return password_hash($password, PASSWORD_DEFAULT);
+  return password_hash($password, PASSWORD_DEFAULT);
 }
 
 function is_logged_in()
 {
-    return isset($_SESSION['user_id']);
+  return isset($_SESSION['user_id']);
 }
 
 function redirect_if_not_logged_in()
 {
-    if (!is_logged_in()) {
-        header("Location: login.php");
-        exit();
-    }
+  if (!is_logged_in()) {
+    header("Location: login.php");
+    exit();
+  }
 }
 
 redirect_if_not_logged_in();
 
-// Handle form submission for updating task status
-if (isset($_POST['updateStatus'])) {
-    $taskId = $_POST['id'];
-    // Update the status of the task with $taskId
-    // You can add your SQL query or function call here
+// Handle checkbox for marking task as done
+if (isset($_POST['updateStatus']) && isset($_POST['id'])) {
+  $taskId = (int) $_POST['id'];
+  $isChecked = isset($_POST['check']);
+
+  if ($isChecked) {
+    $sql = "UPDATE tbl_tugas SET status='Done' WHERE id = $taskId";
+  } else {
+    $sql = "UPDATE tbl_tugas SET status='No Status' WHERE id = $taskId";
+  }
+  mysqli_query($koneksi, $sql);
 }
 
 if (isset($_POST['submit'])) {
-    $tugas = sanitize_input($_POST['listBaru']);
-    $priority = sanitize_input($_POST['priority']);
-    
-    $tugas = mysqli_escape_string($koneksi, $tugas);
-    $priority = mysqli_escape_string($koneksi, $priority);
-  
-    $sql = "INSERT INTO tbl_tugas (priority, tugas, status)
+  $tugas = sanitize_input($_POST['listBaru']);
+  $priority = sanitize_input($_POST['priority']);
+
+  $tugas = mysqli_escape_string($koneksi, $tugas);
+  $priority = mysqli_escape_string($koneksi, $priority);
+
+  $sql = "INSERT INTO tbl_tugas (priority, tugas, status)
             VALUES ('{$priority}', '{$tugas}', 'No Status')";
-    mysqli_query($koneksi, $sql);
+  mysqli_query($koneksi, $sql);
 }
 
 if (isset($_GET['status']) && isset($_GET['id'])) {
-    $id = (int)$_GET['id']; // Cast to integer to ensure it is a valid ID.
-    if ($_GET['status'] == 1) {
-        $sql = "UPDATE tbl_tugas SET status='On Progress' WHERE id = $id";
-    } else if ($_GET['status'] == 2) {
-        $sql = "UPDATE tbl_tugas SET status='Cancelled' WHERE id = $id";
-    } else if ($_GET['status'] == 3) {
-        $sql = "UPDATE tbl_tugas SET status='Done' WHERE id = $id";
-    } else if ($_GET['status'] == 4) {
-        $sql = "DELETE FROM tbl_tugas WHERE id = $id";
-    }
-    mysqli_query($koneksi, $sql);
+  $id = (int) $_GET['id']; // Cast to integer to ensure it is a valid ID.
+  if ($_GET['status'] == 1) {
+    $sql = "UPDATE tbl_tugas SET status='On Progress' WHERE id = $id";
+  } else if ($_GET['status'] == 2) {
+    $sql = "UPDATE tbl_tugas SET status='Cancelled' WHERE id = $id";
+  } else if ($_GET['status'] == 3) {
+    $sql = "UPDATE tbl_tugas SET status='Done' WHERE id = $id";
+  } else if ($_GET['status'] == 4) {
+    $sql = "DELETE FROM tbl_tugas WHERE id = $id";
+  }
+  mysqli_query($koneksi, $sql);
 }
 
 $sql = "SELECT * FROM tbl_tugas ORDER BY priority DESC, status ASC";
@@ -74,7 +80,11 @@ $hasil = mysqli_query($koneksi, $sql);
 <html lang="en">
 
 <head>
-    <!-- ... (head section) -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -125,10 +135,10 @@ $hasil = mysqli_query($koneksi, $sql);
             echo "</td>";
 
             echo "<td>";
-            echo "<form action='todo.php' method='POST'>";
+            echo "<form action='todo.php' method='POST' style='display:inline;'>";
             echo "<input type='checkbox' name='check' onchange='this.form.submit()' " . ($baris['status'] == 'Done' ? 'checked' : '') . ">";
             echo "<input type='hidden' name='id' value='" . $baris['id'] . "'>";
-            echo "<input type='submit' name='updateStatus' style='display:none;'>"; // Add this line
+            echo "<input type='hidden' name='updateStatus' value='1'>";
             echo "</form>";
             echo "</td>";
 
